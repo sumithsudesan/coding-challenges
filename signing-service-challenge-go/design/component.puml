@@ -1,0 +1,28 @@
+@startuml
+
+actor Client
+
+rectangle "API Server" {
+  rectangle "Storage" {
+    [InMemoryStorage]
+    [DB Storage (future)]
+  }
+  rectangle "Crypto" {
+    [Key Generation]
+    [Signing]
+  }
+  rectangle "SignatureDevice" {
+    [ID]
+    [Label]
+    [Algorithm]
+    [SignatureCounter]
+  }
+}
+
+Client --> "API Server" : HTTP Requests
+"API Server" --> "Storage" : Interacts
+"API Server" --> "Crypto" : Uses
+"Storage" --> "SignatureDevice" : Manages
+"Crypto" --> "SignatureDevice" : Provides Key Generation and Signing
+
+@enduml

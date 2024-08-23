@@ -3,18 +3,31 @@ package main
 import (
 	"log"
 
-	"github.com/fiskaly/coding-challenges/signing-service-challenge/api"
+	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/api"
+	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/config"
+	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/persistence"
 )
 
-const (
-	ListenAddress = ":8080"
-	// TODO: add further configuration parameters here ...
-)
+//How to use?
+//1.  export STORAGE_TYPE="in-memory"
+//    export PORT=":8080"
+//2.  go run main.go
 
+// Main function - starting point
 func main() {
-	server := api.NewServer(ListenAddress)
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal("[ERROR] Failed to load configuration: ", err)
+	}
 
-	if err := server.Run(); err != nil {
-		log.Fatal("Could not start server on ", ListenAddress)
+	// Create storage based on the type
+	store := persistence.NewStorage(cfg.StorageType)
+
+	// Create sevrver- port and storage
+	svr := api.NewServer(cfg.Port, store)
+	log.Println("Server starting .....")
+	// Running server
+	if err := svr.Run(); err != nil {
+		log.Fatal("[ERROR] Could not start server on port: ", cfg.Port)
 	}
 }

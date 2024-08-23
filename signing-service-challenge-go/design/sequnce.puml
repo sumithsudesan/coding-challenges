@@ -1,0 +1,32 @@
+@startuml
+
+actor Client
+
+participant "API Server" as API
+participant "Storage" as Storage
+participant "Crypto" as Crypto
+
+== Create Signature Device ==
+
+Client -> API: POST /api/v0/device\n{"algorithm": "ECC", "label": "My Device"}
+API -> Storage: SaveDevice(device)
+Storage --> API: Device Created
+API -> Client: Response with Device ID and Label
+
+== Sign Transaction ==
+
+Client -> API: POST /api/v0/sign\n{"device_id": "device123", "data": "some_data"}
+API -> Storage: GetDevice(device_id)
+Storage --> API: Return Device
+API -> Crypto: SignData(data, device_key)
+Crypto --> API: Return Signed Data
+API -> Client: Response with Signature and Signed Data
+
+== List Devices ==
+
+Client -> API: GET /api/v0/devices
+API -> Storage: ListDevices()
+Storage --> API: Return List of Devices
+API -> Client: Response with List of Devices
+
+@enduml

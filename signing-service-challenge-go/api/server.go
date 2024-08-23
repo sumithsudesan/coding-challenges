@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/persistence"
 )
 
 // Response is the generic API response container.
@@ -18,25 +20,53 @@ type ErrorResponse struct {
 // Server manages HTTP requests and dispatches them to the appropriate services.
 type Server struct {
 	listenAddress string
+	// for storage
+	storage persistence.Storage
 }
 
 // NewServer is a factory to instantiate a new Server.
-func NewServer(listenAddress string) *Server {
+func NewServer(listenAddress string, store persistence.Storage) *Server {
 	return &Server{
 		listenAddress: listenAddress,
-		// TODO: add services / further dependencies here ...
+		storage:       store,
 	}
+}
+
+func (s *Server) GetStorage() persistence.Storage {
+	return s.storage
 }
 
 // Run registers all HandlerFuncs for the existing HTTP routes and starts the Server.
 func (s *Server) Run() error {
 	mux := http.NewServeMux()
 
-	mux.Handle("/api/v0/health", http.HandlerFunc(s.Health))
-
-	// TODO: register further HandlerFuncs here ...
+	// handler
+	mux.HandleFunc("/api/v0/health", s.withCORS(s.Health))
+	mux.HandleFunc("/api/v0/device", s.withCORS(s.CreateSignatureDevice))
+	mux.HandleFunc("/api/v0/sign", s.withCORS(s.SignTransaction))
+	mux.HandleFunc("/api/v0/devices", s.withCORS(s.ListDevices))
 
 	return http.ListenAndServe(s.listenAddress, mux)
+}
+
+// withCORS wraps a handler to add CORS headers.
+// To allow or restrict resources based on the origin of the request,
+// ensuring secure interactions between different origins.
+func (s *Server) withCORS(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow all origins, methods, and headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Pass the request to the handler function
+		next.ServeHTTP(w, r)
+	})
 }
 
 // WriteInternalError writes a default internal error message as an HTTP response.
