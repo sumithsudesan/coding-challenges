@@ -6,7 +6,7 @@ import (
 
 // Storage Interface - methods to manage the device data
 type Storage interface {
-	SaveDevice(device domain.SignatureDevice) error
-	GetDevice(deviceID string) (domain.SignatureDevice, error)
-	ListDevices() ([]domain.SignatureDevice, error)
+	SaveDevice(device *domain.SignatureDevice) string
+	GetDevice(deviceID string) (*domain.SignatureDevice, error)
+	ListDevices() ([]*domain.SignatureDevice, error)
 }

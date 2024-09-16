@@ -7,20 +7,19 @@ import (
 )
 
 type ECDSAHelper struct {
-	privateKey *ecdsa.PrivateKey
-}
-
-// Creates new ECDSAHelper instnace
-func NewECDSAHelper(privateKey *ecdsa.PrivateKey) ECDSAHelper {
-	return ECDSAHelper{privateKey: privateKey}
 }
 
 // Get the signature
-func (h ECDSAHelper) Sign(data string) ([]byte, error) {
+func (h ECDSAHelper) Sign(dataToBeSigned []byte) ([]byte, error) {
+	generator := ECCGenerator{}
+	pair, err := generator.Generate()
+	if err != nil {
+		return nil, err
+	}
 	hash := sha256.New()
-	hash.Write([]byte(data))
+	hash.Write([]byte(dataToBeSigned))
 	hashed := hash.Sum(nil)
-	r, s, err := ecdsa.Sign(rand.Reader, h.privateKey, hashed)
+	r, s, err := ecdsa.Sign(rand.Reader, pair.Private, hashed)
 	if err != nil {
 		return nil, err
 	}
