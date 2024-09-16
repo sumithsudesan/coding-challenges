@@ -7,19 +7,17 @@ import (
 	"crypto/sha256"
 )
 
-type RSAHelper struct {
-	privateKey *rsa.PrivateKey
-}
+type RSASigner struct{}
 
-// Creates new RSAHelper instnace
-func NewRSAHelper(privateKey *rsa.PrivateKey) RSAHelper {
-	return RSAHelper{privateKey: privateKey}
-}
+func (r *RSASigner) Sign(dataToBeSigned []byte) ([]byte, error) {
+	generator := RSAGenerator{}
+	pair, err := generator.Generate()
+	if err != nil {
+		return nil, err
+	}
 
-// Get the signature
-func (h RSAHelper) Sign(data string) ([]byte, error) {
 	hash := sha256.New()
-	hash.Write([]byte(data))
+	hash.Write([]byte(dataToBeSigned))
 	hashed := hash.Sum(nil)
-	return rsa.SignPKCS1v15(rand.Reader, h.privateKey, crypto.SHA256, hashed)
+	return rsa.SignPKCS1v15(rand.Reader, pair.Private, crypto.SHA256, hashed)
 }

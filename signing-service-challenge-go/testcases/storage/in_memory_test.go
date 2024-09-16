@@ -19,7 +19,7 @@ func TestInMemoryStorage(t *testing.T) {
 	}
 
 	// Test CreateDevice
-	store.SaveDevice(device)
+	store.SaveDevice(&device)
 
 	// Test GetDevice
 	dev, err := store.GetDevice("device123")
@@ -27,8 +27,8 @@ func TestInMemoryStorage(t *testing.T) {
 		t.Errorf("GetDevice() failed: %v", err)
 	}
 
-	if device != dev {
-		t.Errorf("GetDevice() returned unexpected device: got %v, want %+v", dev, device)
+	if device != *dev {
+		t.Errorf("GetDevice() returned unexpected device: got %v, want %+v", dev, &device)
 	}
 
 	// Test ListDevices

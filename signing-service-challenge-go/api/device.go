@@ -5,12 +5,13 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 
+	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/crypto"
 	"github.com/fiskaly/coding-challenges/signing-service-challenge-go/domain"
 )
 
@@ -37,15 +38,23 @@ type SigninRequest struct {
 	Data     string `json:"data"`
 }
 
+type DevicesResponse struct {
+	DeviceID         string `json:"device_id"`
+	Label            string `json:"label"`
+	SignatureCounter int    `json:"counter"`
+}
+
 // CreateSignatureDevice handles the creation of a new Signature device.
 func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
+	log.Println("CreateSignatureDevice .....")
 	// Check the POST method
 	if r.Method != http.MethodPost {
 		WriteErrorResponse(w, http.StatusMethodNotAllowed, []string{http.StatusText(http.StatusMethodNotAllowed)})
 		return
 	}
-	var err error
 
+	log.Println("CreateSignatureDevice .....")
+	var err error
 	// handling create Device Req
 	var createDeviceReq CreateDeviceRequest
 	if err = json.NewDecoder(r.Body).Decode(&createDeviceReq); err != nil {
@@ -53,15 +62,15 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var keyPair domain.KeyDataPair
+	log.Println("CreateSignatureDevice .....")
 
 	// Generate key based on the algoirthm
-	keyPair, err = s.generateKeyPair(createDeviceReq.Algorithm)
+	signer, err := crypto.GetSigner(createDeviceReq.Algorithm)
 	if err != nil {
 		WriteInternalError(w)
 		return
 	}
-
+	log.Println("deviceID .....")
 	// device UUID
 	deviceID := uuid.New().String()
 
@@ -70,19 +79,15 @@ func (s *Server) CreateSignatureDevice(w http.ResponseWriter, r *http.Request) {
 		ID:               deviceID,
 		Label:            createDeviceReq.Label,
 		SignatureCounter: 0,
-		KeyPair:          keyPair,
+		Signer:           signer,
 	}
-
+	log.Println("SaveDevice .....")
 	// Save the device
-	err = s.storage.SaveDevice(device)
-	if err != nil {
-		WriteInternalError(w)
-		return
-	}
-
+	id := s.storage.SaveDevice(&device)
+	log.Println("CreateSignatureDeviceResponse .....")
 	// Response
 	resp := CreateSignatureDeviceResponse{
-		DeviceID: deviceID,
+		DeviceID: id,
 		Label:    createDeviceReq.Label,
 	}
 	WriteAPIResponse(w, http.StatusOK, resp)
@@ -117,24 +122,22 @@ func (s *Server) SignTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	signer := device.Signer
+
 	counter := device.SignatureCounter
 	lastAuth := base64.StdEncoding.EncodeToString([]byte(device.ID))
 	securedData := fmt.Sprintf("%d_%s_%s", counter, signinReq.Data, lastAuth)
-	signature, err := device.KeyPair.Sign(securedData)
+	signature, err := signer.Sign([]byte(securedData))
 	if err != nil {
 		WriteInternalError(w)
 		return
 	}
 
 	// increment the counter
-	device.SignatureCounter++
+	device.IncrementSignatureCounter()
 
 	// Save the device details
-	err = s.storage.SaveDevice(device)
-	if err != nil {
-		WriteInternalError(w)
-		return
-	}
+	s.storage.SaveDevice(device)
 
 	// Return the response
 	resp := SignatureResponse{
@@ -159,17 +162,14 @@ func (s *Server) ListDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteAPIResponse(w, http.StatusOK, devices)
-}
-
-// Generate KeyPair
-func (s *Server) generateKeyPair(algorithm string) (domain.KeyDataPair, error) {
-	switch algorithm {
-	case "ECC":
-		return domain.CreateECCKeyPair()
-	case "RSA":
-		return domain.CreateRSAKeyPair()
-	default:
-		return nil, errors.New("unsupported algorithm")
+	var devicesList []DevicesResponse
+	for _, device := range devices {
+		devicesList = append(devicesList, DevicesResponse{
+			DeviceID:         device.ID,
+			Label:            device.Label,
+			SignatureCounter: device.SignatureCounter,
+		})
 	}
+
+	WriteAPIResponse(w, http.StatusOK, devicesList)
 }

@@ -90,7 +90,7 @@ func TestSignTransaction(t *testing.T) {
 		SignatureCounter: 1,
 		Label:            "My Device",
 	}
-	server.GetStorage().SaveDevice(device)
+	server.GetStorage().SaveDevice(&device)
 
 	tests := []struct {
 		name           string
@@ -147,12 +147,12 @@ func TestListDevices(t *testing.T) {
 	server := setupServer()
 
 	// Create a couple of devices for testing
-	server.GetStorage().SaveDevice(domain.SignatureDevice{
+	server.GetStorage().SaveDevice(&domain.SignatureDevice{
 		ID:               "device123",
 		SignatureCounter: 1,
 		Label:            "Device 123",
 	})
-	server.GetStorage().SaveDevice(domain.SignatureDevice{
+	server.GetStorage().SaveDevice(&domain.SignatureDevice{
 		ID:               "device456",
 		SignatureCounter: 2,
 		Label:            "Device 456",

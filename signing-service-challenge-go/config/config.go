@@ -16,6 +16,7 @@ func LoadConfig() (*Config, error) {
 		storageType = "in-memory" // Default to in-memory
 	}
 
+	// 8080
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = ":8080"
